@@ -17,11 +17,14 @@
 //
 
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 
 namespace IpfsUploader
 {
     public class IpfsUploadResult
     {
+        // ---------------- Properties ----------------
+
         [JsonPropertyName( "Name" )]
         public string? FileName { get; set; }
 
@@ -30,5 +33,26 @@ namespace IpfsUploader
 
         [JsonPropertyName( "Size" )]
         public long? FileSize { get; set; }
+
+        // ---------------- Functions ----------------
+
+        internal void AppendToXml( XElement parent )
+        {
+            var fileElement = new XElement( "File" );
+
+            if( this.FileName is not null )
+            {
+                var attr = new XAttribute( "name", this.FileName );
+                fileElement.Add( attr );
+            }
+
+            if( this.Hash is not null )
+            {
+                var element = new XElement( "IpfsHash", this.Hash );
+                fileElement.Add( element );
+            }
+
+            parent.Add( fileElement );
+        }
     }
 }

@@ -18,6 +18,7 @@
 
 using System.ComponentModel;
 using System.Net.Http.Json;
+using System.Xml.Linq;
 using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace IpfsUploader
@@ -72,6 +73,16 @@ namespace IpfsUploader
 
             var errors = new List<Exception>();
 
+            XDocument? doc = null;
+            XElement? root = null;
+            if( config.Outputfile is not null )
+            {
+                var dec = new XDeclaration( "1.0", "utf-8", "yes" );
+                doc = new XDocument( dec );
+                root = new XElement( "Files" );
+                doc.Add( root );
+            }
+
             foreach( string file in matchingFiles )
             {
                 try
@@ -79,12 +90,21 @@ namespace IpfsUploader
                     this.log.WriteLine( $"Uploading '{file}'" );
                     IpfsUploadResult result = TryUpload( file, url );
                     this.log.WriteLine( $"\t- {result.FileName} - {result.Hash}" );
+                    if( root is not null )
+                    {
+                        result.AppendToXml( root );
+                    }
                 }
                 catch( Exception e )
                 {
                     this.log.WriteLine( "\t- Error: " + e.Message );
                     errors.Add( e );
                 }
+            }
+
+            if( config.Outputfile is not null )
+            {
+                doc?.Save( config.Outputfile.FullName, SaveOptions.None );
             }
 
             return new IpfsResult( errors );

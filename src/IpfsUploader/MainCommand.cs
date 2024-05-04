@@ -57,7 +57,7 @@ namespace IpfsUploader
             this.rootCommand.Add( port );
 
             var outputFile = new Option<FileInfo>(
-                "--output_hash_file",
+                "--output_xml_file",
                 "Where to output an file that contains the created hashes in XML format"
             )
             {
