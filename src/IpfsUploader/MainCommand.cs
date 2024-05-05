@@ -17,7 +17,6 @@
 //
 
 using System.CommandLine;
-using System.Text;
 
 namespace IpfsUploader
 {
@@ -74,12 +73,45 @@ namespace IpfsUploader
             };
             this.rootCommand.Add( filePath );
 
+            var printLicense = new Option<bool>(
+                "--print_license",
+                () => false,
+                "Prints this program's license to stdout, and exits.  This takes priority over all other print options."
+            )
+            {
+                IsRequired = false
+            };
+            this.rootCommand.Add( printLicense );
+
+            var printReadme = new Option<bool>(
+                "--print_readme",
+                () => false,
+                "Prints the readme file to stdout, and exits. This takes priority over the --print_credits option."
+            )
+            {
+                IsRequired = false
+            };
+            this.rootCommand.Add( printReadme );
+
+            var printCredits = new Option<bool>(
+                "--print_credits",
+                () => false,
+                "Prints the third-party licenses to stdout, and exits."
+            )
+            {
+                IsRequired = false
+            };
+            this.rootCommand.Add( printCredits );
+
             this.rootCommand.SetHandler(
                 this.Handler,
                 serverUrl,
                 port,
                 outputFile,
-                filePath
+                filePath,
+                printLicense,
+                printReadme,
+                printCredits
              );
         }
 
@@ -87,6 +119,24 @@ namespace IpfsUploader
 
         public int Invoke( string[] args )
         {
+            // Need to handle there here, since if the other required
+            // arguments are not specified, we'll get an error message.
+            if( args.Contains( "--print_license" ) || args.Contains( "--print_license=true" ) )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.License.md" ) );
+                return 0;
+            }
+            else if( args.Contains( "--print_readme" ) || args.Contains( "--print_readme=true" ) )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.Readme.md" ) );
+                return 0;
+            }
+            else if( args.Contains( "--print_credits" ) || args.Contains( "--print_credits=true" ) )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.Credits.md" ) );
+                return 0;
+            }
+
             return this.rootCommand.Invoke( args );
         }
 
@@ -94,9 +144,29 @@ namespace IpfsUploader
             string serverUrl,
             ushort port,
             FileInfo? outputFile,
-            FileInfo file
+            FileInfo file,
+            bool printLicense,
+            bool printReadme,
+            bool printCredits
         )
         {
+            // If we somehow make it here, may as well print the thing we want to print and return.
+            if( printLicense )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.License.md" ) );
+                return;
+            }
+            else if( printReadme )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.Readme.md" ) );
+                return;
+            }
+            else if( printCredits )
+            {
+                Console.WriteLine( this.ReadStringResource( $"{nameof( IpfsUploader )}.Resources.Credits.md" ) );
+                return;
+            }
+
             var config = new IpfsConfig(
                 serverUrl,
                 port,
@@ -111,6 +181,22 @@ namespace IpfsUploader
                 if( result.Success == false )
                 {
                     throw new AggregateException( result.Errors );
+                }
+            }
+        }
+
+        private string ReadStringResource( string resourceName )
+        {
+            using( Stream? stream = this.GetType().Assembly.GetManifestResourceStream( resourceName ) )
+            {
+                if( stream is null )
+                {
+                    throw new InvalidOperationException( $"Could not open stream for {resourceName}" );
+                }
+
+                using( StreamReader reader = new StreamReader( stream ) )
+                {
+                    return reader.ReadToEnd();
                 }
             }
         }
