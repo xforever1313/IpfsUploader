@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-using System.ComponentModel;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Xml.Linq;
 using Microsoft.Extensions.FileSystemGlobbing;
@@ -27,7 +27,7 @@ namespace IpfsUploader
     {
         // ---------------- Fields ----------------
 
-        private const string userAgent = "Ipfs Uploader (seth@shendrick.net)";
+        private const string userAgent = "Ipfs_Uploader";
 
         private const string addEndpoint = "/api/v0/add";
 
@@ -39,7 +39,12 @@ namespace IpfsUploader
 
         public IpfsRunner( TextWriter log )
         {
+            Version? version = GetType().Assembly.GetName().Version;
             this.httpClient = new HttpClient();
+            this.httpClient.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue( userAgent, version?.ToString( 3 ) )
+            );
+
             this.log = log;
         }
 
@@ -77,13 +82,13 @@ namespace IpfsUploader
             XElement? root = null;
             if( config.Outputfile is not null )
             {
-                var dec = new XDeclaration( "1.0", "utf-8", "yes" );
+                var dec = new XDeclaration( "1.0", "utf-8", null );
                 doc = new XDocument( dec );
                 root = new XElement( "Files" );
                 doc.Add( root );
             }
 
-            foreach( string file in matchingFiles )
+            foreach( string file in matchingFiles.OrderBy( s => s ) )
             {
                 try
                 {

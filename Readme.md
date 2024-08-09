@@ -35,7 +35,7 @@ Remember, the "port" on your IPFS node should **NEVER** be exposed to the public
 The output_xml_file's format looks like the following:
 
 ```xml
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Files>
   <File name="BD240401.jpg">
     <IpfsHash>QmV4nrqxNE5FZdbJRCBJimtjsJYwPThg8iAD9icQ2ARsgt</IpfsHash>
