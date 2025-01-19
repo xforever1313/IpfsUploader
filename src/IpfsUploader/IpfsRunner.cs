@@ -40,7 +40,11 @@ namespace IpfsUploader
         public IpfsRunner( TextWriter log )
         {
             Version? version = GetType().Assembly.GetName().Version;
-            this.httpClient = new HttpClient();
+            this.httpClient = new HttpClient
+            {
+                // Cancellation tokens are used to control timeout.
+                Timeout = Timeout.InfiniteTimeSpan
+            };
             this.httpClient.DefaultRequestHeaders.UserAgent.Add(
                 new ProductInfoHeaderValue( userAgent, version?.ToString( 3 ) )
             );
@@ -93,7 +97,7 @@ namespace IpfsUploader
                 try
                 {
                     this.log.WriteLine( $"Uploading '{file}'" );
-                    IpfsUploadResult result = TryUpload( file, url );
+                    IpfsUploadResult result = TryUpload( file, url, config.TimeoutMultiplier );
                     this.log.WriteLine( $"\t- {result.FileName} - {result.Hash}" );
                     if( root is not null )
                     {
@@ -120,8 +124,26 @@ namespace IpfsUploader
             this.httpClient?.Dispose();
         }
 
-        private IpfsUploadResult TryUpload( string filePath, Uri url )
+        private IpfsUploadResult TryUpload( string filePath, Uri url, uint timeoutMultiplier )
         {
+            TimeSpan timeout;
+            if( timeoutMultiplier == 0 )
+            {
+                timeout = Timeout.InfiniteTimeSpan;
+            }
+            else
+            {
+                var fileInfo = new FileInfo( filePath );
+                long fileSizeBits = fileInfo.Length * 8;
+
+                long seconds = fileSizeBits / ( 100 * 1000 * 1000 ); // Assuming 100 Mbps connection.
+
+                // 100 seconds is the default timeout for HttpClient, add that
+                // in case its not a smooth 100Mbps connection for wiggle room.
+                seconds = ( seconds * timeoutMultiplier ) + 100;
+                timeout = TimeSpan.FromSeconds( seconds );
+            }
+
             using FileStream fs = File.OpenRead( filePath );
             using var fileVaue = new StreamContent( fs );
             var dataContent = new MultipartFormDataContent
@@ -129,9 +151,12 @@ namespace IpfsUploader
                 { fileVaue, "path", Path.GetFileName( filePath ) }
             };
 
+            using var tokenSource = new CancellationTokenSource( timeout );
+
             HttpResponseMessage response = this.httpClient.PostAsync(
                 url,
-                dataContent
+                dataContent,
+                tokenSource.Token
             ).Result;
 
             if( response.IsSuccessStatusCode == false )

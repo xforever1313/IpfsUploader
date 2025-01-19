@@ -22,7 +22,8 @@ namespace IpfsUploader
         string ServerUrl,
         ushort Port,
         FileInfo InputFile,
-        FileInfo? Outputfile
+        FileInfo? Outputfile,
+        uint TimeoutMultiplier
     )
     {
         // ---------------- Functions ----------------

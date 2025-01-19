@@ -51,9 +51,19 @@ namespace IpfsUploader
                 "The port of the IPFS node's API server.  Remember when setting up a node, this port should NEVER be exposed to the internet."
             )
             {
-                IsRequired = true
+                IsRequired = false
             };
             this.rootCommand.Add( port );
+
+            var timeoutMultiplier = new Option<uint>(
+                "--timeout_multiplier",
+                () => 1,
+                "How much to multiple the timeout by, in case of a slow connection.  The default timeout is calculated by the file size uploaded using a 100Mbps connection. A value of 0 means infinite timeout (not recommended)."
+            )
+            {
+                IsRequired = false
+            };
+            this.rootCommand.Add( timeoutMultiplier );
 
             var outputFile = new Option<FileInfo>(
                 "--output_xml_file",
@@ -109,6 +119,7 @@ namespace IpfsUploader
                 port,
                 outputFile,
                 filePath,
+                timeoutMultiplier,
                 printLicense,
                 printReadme,
                 printCredits
@@ -145,6 +156,7 @@ namespace IpfsUploader
             ushort port,
             FileInfo? outputFile,
             FileInfo file,
+            uint timeoutMultiplier,
             bool printLicense,
             bool printReadme,
             bool printCredits
@@ -171,7 +183,8 @@ namespace IpfsUploader
                 serverUrl,
                 port,
                 file,
-                outputFile
+                outputFile,
+                timeoutMultiplier
             );
 
             using( var runner = new IpfsRunner( this.consoleOut ) )
